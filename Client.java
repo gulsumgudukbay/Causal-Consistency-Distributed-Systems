@@ -27,57 +27,69 @@ import java.util.concurrent.TimeUnit;
 import java.util.Random; 
 import java.util.List; 
 
-public class Client implements IClient{
-
-    final public static int BUF_SIZE = 1024 * 64;
-    String my_IP = "";
-    String server_IP = "";
-    String my_id = "";
-    int my_port = 0;
-    int server_port = 0;
+public class Client implements IClient
+{
     Registry server_registry;
-    static IServer server_stub;
-    static NodeStruct my_node; //stores my ip, my name and my port
-    
+    IServer server_stub;
+    NodeStruct my_node; //stores my ip, my name and my port
+    NodeStruct server_node;
 
-    private Client(String id, String ip, int port, String sip, int sport) {
-    	my_IP = ip;
-    	my_port = port;
-    	server_IP = sip;
-    	server_port = sport;
-    	my_id = id;
+    private Client(String id, String ip, int port, String sid, String sip, int sport) 
+    {
+	    my_node = new NodeStruct(id, ip, port);
+        server_node = new NodeStruct(sid, sip, sport);
 
-	    my_node = new NodeStruct(my_id, my_IP, my_port);
-
-	
-      	try {
+        try 
+        {
             System.setProperty("java.security.policy","security.policy");
-    		server_registry = LocateRegistry.getRegistry(server_IP, server_port);
-            server_stub = (IServer) server_registry.lookup("IServer");
-
-        } catch (Exception e) {
+    		server_registry = LocateRegistry.getRegistry(sip, sport);
+            server_stub = (IServer) server_registry.lookup(sid);
+        } 
+        catch (Exception e) 
+        {
             System.err.println("peer exception " + e.toString());
             e.printStackTrace();
         }
     }
 
+    public void registerRequest()
+    {
+        try
+        {
+            server_stub.registerReply(my_node);
+        }
+        catch(RemoteException e)
+        {
+            e.printStackTrace();
+        }
+    }
 
-    public static void main(String[] args) {
 
 
-        try {
+    public static void main(String[] args) 
+    {
+        try 
+        {
             System.setProperty("java.security.policy","security.policy");
 
-            Client cli = new Client(args[0], args[1], Integer.parseInt(args[2]), args[3], Integer.parseInt(args[4]));
-            System.setProperty("java.rmi.server.hostname", cli.my_IP);
-            IClient mystub = (IClient) UnicastRemoteObject.exportObject(cli, cli.my_port);
-            
-            Registry registry = LocateRegistry.createRegistry( cli.my_port);
-            registry.rebind(cli.my_id,mystub);
+            Client cli = new Client(args[0], args[1], Integer.parseInt(args[2]), args[3], args[4], Integer.parseInt(args[5]));
+            //Client cli = new Client("c1", "127.0.0.1", 2015, "s1", "127.0.0.1", 2014);
 
-            System.out.println(cli.my_id + " ready");
+            System.setProperty("java.rmi.server.hostname", cli.my_node.ip);
+            IClient mystub = (IClient) UnicastRemoteObject.exportObject(cli, cli.my_node.port);
+            
+            Registry registry = LocateRegistry.createRegistry( cli.my_node.port);
+            registry.rebind(cli.my_node.id, mystub);
+
+            System.out.println(cli.my_node.id + " ready");
+
+            System.out.println(cli.my_node.id + " sent register request for server " + cli.server_node.id);
+
+            mystub.registerRequest();
 			
-        } catch (Exception e) {
+        } 
+        catch (Exception e) 
+        {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
         }
