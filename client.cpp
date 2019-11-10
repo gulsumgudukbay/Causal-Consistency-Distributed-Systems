@@ -1,3 +1,4 @@
+#include <cstring>
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -50,7 +51,7 @@ int main (int argc, char* argv[])
     
     bzero((char *) &svrAdd, sizeof(svrAdd));
     svrAdd.sin_family = AF_INET;
-    
+
     bcopy((char *) server -> h_addr, (char *) &svrAdd.sin_addr.s_addr, server -> h_length);
     
     svrAdd.sin_port = htons(portNo);
@@ -64,15 +65,32 @@ int main (int argc, char* argv[])
     }
     
     //send stuff to server
-    for(;;)
+    while(1)
     {
-        char s[300];
+        char s[1024];
+        char rec[1024];
+
         //cin.clear();
-        //cin.ignore(256, '\n');
-        cout << "Enter stuff: ";
-        bzero(s, 301);
-        cin.getline(s, 300);
-        
-        write(listenFd, s, strlen(s));
+        string tester;
+
+        printf("Enter stuff: ");
+
+        scanf("%s", &s[0]);
+        //cin.ignore();
+        send(listenFd, s, sizeof(s), 0);
+
+        if(strcmp(s, "exit") == 0)
+        {
+            close(listenFd);
+            printf("Disconnected from server\n");
+            exit(1);
+        }
+
+        int numBytesRead = recv(listenFd, rec, sizeof(rec), 0);
+        if (numBytesRead > 0 )
+        {
+            printf("Server: %s\n", rec);
+        }
+    
     }
 }
