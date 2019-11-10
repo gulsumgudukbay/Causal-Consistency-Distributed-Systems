@@ -62,6 +62,13 @@ public class Server extends Thread implements IServer { //
 
     public boolean putKeyValue(int key, String val, NodeStruct c_node) throws RemoteException
     {
+        lamport_clock++;
+        //replicated write
+
+        dependency_list.get(c_node.id).clear();
+        DepNode dn = new DepNode(key, new Version(lamport_clock, s_node.id));
+        dependency_list.get(c_node.id).add(dn);
+
         Pair<String, Version> new_p = new Pair<String, Version>(val, new Version(lamport_clock, s_node.id));
         key_v_store.put(key, new_p);
         System.out.println("Added " + val + " and the size of keyvstore is: " + key_v_store.size());
