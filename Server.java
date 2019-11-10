@@ -7,6 +7,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import javafx.util.Pair;
 import java.util.Map.Entry;
@@ -20,9 +21,10 @@ public class Server extends Thread implements IServer { //
     //data structures
     Map<String, NodeStruct> client_list;
     Map<String, NodeStruct> server_list;
-    Map<Integer, Pair<String, Version>> key_v_store;
-    Map<String, Map<Integer, Version>> dependency_list;
-    Map<Integer, Version> pending_list;
+    Map<Integer, Pair<String, Version>> key_v_store; // key-> (value, version)
+    Map<String, List<DepNode>> dependency_list; //client id -> ( key-> version)
+    Map<String, Map<Integer, List<DepNode>>> pending_list; //cli_id ->key-> Map<key, Map<key, Version>>
+
 
     public Server(String id, String ip, int port) {
         s_node = new NodeStruct(id, ip, port);
@@ -46,8 +48,15 @@ public class Server extends Thread implements IServer { //
 
     public String getKey(int key, NodeStruct c_node) throws RemoteException
     {
-        
         String ret = key_v_store.get(key).getKey();
+        DepNode dn = new DepNode(key, new Version(lamport_clock, s_node.id));
+        if(dependency_list.containsKey(c_node.id))
+            dependency_list.get(c_node.id).add(dn);
+        else
+        {
+            dependency_list.put(c_node.id, new ArrayList<DepNode>());
+            dependency_list.get(c_node.id).add(dn);
+        } 
         return ret;
     }
 
