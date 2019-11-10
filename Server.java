@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import javafx.util.Pair;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 import java.sql.*;
@@ -15,28 +16,49 @@ import java.sql.*;
 public class Server extends Thread implements IServer { //
 
     NodeStruct s_node;
-
+    int lamport_clock;
     //data structures
     Map<String, NodeStruct> client_list;
     Map<String, NodeStruct> server_list;
-
+    Map<Integer, Pair<String, Version>> key_v_store;
+    Map<String, Map<Integer, Version>> dependency_list;
+    Map<Integer, Version> pending_list;
 
     public Server(String id, String ip, int port) {
         s_node = new NodeStruct(id, ip, port);
         client_list = new HashMap<String, NodeStruct>();
         server_list = new HashMap<String, NodeStruct>();
+        key_v_store = new HashMap<Integer, Pair<String,Version>>();
+        lamport_clock = 0;
     }
 
     public void run() {
 
     }
 
-    public boolean registerReply(NodeStruct node) throws RemoteException{
-        
+    public boolean registerReply(NodeStruct node) throws RemoteException
+    {
         client_list.put(node.id, node);
         System.out.println("Registered client " + node.id);
         return true;
     }
+
+
+    public String getKey(int key, NodeStruct c_node) throws RemoteException
+    {
+        
+        String ret = key_v_store.get(key).getKey();
+        return ret;
+    }
+
+    public boolean putKeyValue(int key, String val, NodeStruct c_node) throws RemoteException
+    {
+        Pair<String, Version> new_p = new Pair<String, Version>(val, new Version(lamport_clock, s_node.id));
+        key_v_store.put(key, new_p);
+        System.out.println("Added " + val + " and the size of keyvstore is: " + key_v_store.size());
+        return true;
+    }
+
 
     public static void main(String args[]) {
 

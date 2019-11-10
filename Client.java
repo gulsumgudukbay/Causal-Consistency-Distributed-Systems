@@ -64,6 +64,36 @@ public class Client implements IClient
         }
     }
 
+    public String read(int key)
+    {
+        String ret = "";
+        try
+        {
+            ret = server_stub.getKey(key, my_node);
+            System.out.println(key + ": " + ret);
+        }
+        catch(RemoteException e)
+        {
+            e.printStackTrace();
+        }
+        return ret;
+    }
+
+    public boolean write(int key, String val)
+    {
+        boolean ret = false;
+        try
+        {
+            ret = server_stub.putKeyValue(key, val, my_node);
+            System.out.println(key + ": " + ret);
+        }
+        catch(RemoteException e)
+        {
+            ret = false;
+            e.printStackTrace();
+        }
+        return ret;
+    }
 
 
     public static void main(String[] args) 
@@ -86,6 +116,22 @@ public class Client implements IClient
             System.out.println(cli.my_node.id + " sent register request for server " + cli.server_node.id);
 
             mystub.registerRequest();
+            if(cli.my_node.id.compareTo("c1") == 0)
+            {
+                cli.write(1, "a");
+                cli.write(2, "b");
+                cli.write(3, "c");
+                cli.read(2);
+            }
+            if(cli.my_node.id.compareTo("c2") == 0)
+            {
+                cli.write(1, "x");
+                cli.write(5, "y");
+                cli.write(6, "z");
+                cli.read(1);
+                cli.read(5);
+
+            }
 			
         } 
         catch (Exception e) 
