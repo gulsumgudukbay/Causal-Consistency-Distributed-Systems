@@ -33,11 +33,32 @@ public class Client implements IClient
     IServer server_stub;
     NodeStruct my_node; //stores my ip, my name and my port
     NodeStruct server_node;
+    ArrayList<ArrayList<String>> messages;
 
     private Client(String id, String ip, int port, String sid, String sip, int sport) 
     {
 	    my_node = new NodeStruct(id, ip, port);
         server_node = new NodeStruct(sid, sip, sport);
+
+        //x = 1, y = 2, z = 3
+        if(id.compareTo("A") == 0)
+        {
+            messages.add(new ArrayList("W", "1", "X_A"));
+        }
+        else if(id.compareTo("B") == 0)
+        {
+            messages.add(new ArrayList("R", "1"));
+            messages.add(new ArrayList("R", "2"));
+            messages.add(new ArrayList("W", "3", "Z_B"));
+        }
+        else if(id.compareTo("C") == 0)
+        {
+            messages.add(new ArrayList("W", "2", "Y_C"));
+        }
+        else if(id.compareTo("D") == 0)
+        {
+            messages.add(new ArrayList("W", "3", "Z_D"));
+        }
 
         try 
         {
@@ -116,22 +137,8 @@ public class Client implements IClient
             System.out.println(cli.my_node.id + " sent register request for server " + cli.server_node.id);
 
             mystub.registerRequest();
-            if(cli.my_node.id.compareTo("c1") == 0)
-            {
-                cli.write(1, "a");
-                cli.write(2, "b");
-                cli.write(3, "c");
-                cli.read(2);
-            }
-            if(cli.my_node.id.compareTo("c2") == 0)
-            {
-                cli.write(1, "x");
-                cli.write(5, "y");
-                cli.write(6, "z");
-                cli.read(1);
-                cli.read(5);
-
-            }
+            
+            for()
 			
         } 
         catch (Exception e) 
