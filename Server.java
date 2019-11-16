@@ -174,7 +174,6 @@ public class Server extends Thread implements IServer { //
     {
         lamport_clock++;
         //replicated write
-
         Set<Map.Entry<String, IServer>> es = server_stubs.entrySet(); 
         Iterator<Map.Entry<String, IServer>> hmIterator = es.iterator(); 
 
