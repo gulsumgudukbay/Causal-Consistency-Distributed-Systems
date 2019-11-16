@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
 import java.sql.*;
-import java.util.Set;
 
 public class Server extends Thread implements IServer { //
 
@@ -89,16 +88,14 @@ public class Server extends Thread implements IServer { //
         //sleep(ms);
         sleep(ms);
         try{
-            Set<Map.Entry<String, NodeStruct>> es = obj.server_list.entrySet(); 
-            Iterator<Map.Entry<String, NodeStruct>> hmIterator = es.iterator(); 
+            Iterator hmIterator = obj.server_list.entrySet().iterator(); 
 
             //create map of id -> server stub;
             //System.out.println(obj.server_list.size());
             while(hmIterator.hasNext()){
-
-                Map.Entry<String, NodeStruct> mapElement = hmIterator.next(); 
-                String server_id = mapElement.getKey();
-                NodeStruct server_node = mapElement.getValue();
+                Map.Entry mapElement = (Map.Entry)hmIterator.next(); 
+                String server_id = (String) mapElement.getKey();
+                NodeStruct server_node = (NodeStruct) mapElement.getValue();
                 //System.out.println(server_id + " " + server_node.ip + " " + server_node.port);
                 //System.out.println(obj.s_node.id);
                 if(server_id.compareTo(obj.s_node.id) != 0){
