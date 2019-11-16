@@ -8,4 +8,9 @@ public class Version implements Serializable {
 		this.id = id;
 		this.timestamp = timestamp;
 	}
+
+	public String toString()
+	{
+		return "<" + timestamp + ", " + id + ">";
+	}
 }

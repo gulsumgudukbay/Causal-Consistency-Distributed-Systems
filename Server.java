@@ -12,12 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-//import javafx.util.Pair;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
-import java.sql.*;
-
+import java.time.LocalDateTime;
+import java.time.temporal.*;
 public class Server extends Thread implements IServer { //
 
     NodeStruct s_node;
@@ -53,13 +52,14 @@ public class Server extends Thread implements IServer { //
         client_list.put(node.id, node);
         System.out.println("Registered client " + node.id);
         //add empty list into dependency
-
+        dependency_list.put(node.id, new ArrayList<DepNode>());
         return true;
     }
 
 
     public String getKey(int key, NodeStruct c_node) throws RemoteException
     {
+        System.out.println("Received client " + c_node.id + "'s read request for key " + key);
         String  ret = "";//.getKey();
         if(key_v_store.containsKey(key)){
             ret = key_v_store.get(key);
@@ -93,6 +93,8 @@ public class Server extends Thread implements IServer { //
             key_v_store.put(key, val);
             //return true;
         }*/
+        System.out.println("At datacenter " + s_node.id + " received replicated write for key: " + key + " and value:  " + val + " and new version: " + new_version);
+        System.out.println(dependency_list);
 
         //traverse list of depnodes
         boolean can_commit = true;
@@ -104,38 +106,43 @@ public class Server extends Thread implements IServer { //
             for(Version ver : pending_list.get(key)){
                 if(compare(ver, new_version)){
                     pending_list.remove(i);
+                    System.out.println("At datacenter " + s_node.id + " removed version " + ver + " from pending list.");
                 }
                 i++;
             }
         }
-        for( DepNode dn : attached_dep_list ){
-            int key1 = dn.key;
-            Version ver1 = dn.v;
-            //check version in the recved_versions of the key1;
-            boolean is_present = false;
-            if(recved_versions.containsKey(key1)){
-                for( Version ver : recved_versions.get(key1) ){
-                    if(compare(ver1, ver)){
-                        is_present = true;
-                        break;
+        if(attached_dep_list.size() > 0)
+        {
+            for( DepNode dn : attached_dep_list ){
+                int key1 = dn.key;
+                Version ver1 = dn.v;
+                //check version in the recved_versions of the key1;
+                boolean is_present = false;
+                if(recved_versions.containsKey(key1)){
+                    for( Version ver : recved_versions.get(key1) ){
+                        if(compare(ver1, ver)){
+                            is_present = true;
+                            break;
+                        }
                     }
+                    /*if(is_present){
+                        //commit
+                        //print 
+                        key_v_store.put(key, val);
+                        return true;
+                    }*/
                 }
-                /*if(is_present){
-                    //commit
-                    //print 
-                    key_v_store.put(key, val);
-                    return true;
-                }*/
-            }
-            if(!is_present){
-                //add to pending
-                if(pending_list.containsKey(key1)){
-                    pending_list.get(key1).add(ver1);
-                }else{
-                    pending_list.put(key1, new ArrayList<Version>());
-                    pending_list.get(key1).add(ver1);
+                if(!is_present){
+                    //add to pending
+                    if(pending_list.containsKey(key1)){
+                        pending_list.get(key1).add(ver1);
+                    }else{
+                        pending_list.put(key1, new ArrayList<Version>());
+                        pending_list.get(key1).add(ver1);
+                    }
+                    can_commit = false;
+                    System.out.println("Cannot commit as " + dn + " is not received");
                 }
-                can_commit = false;
             }
         }
         if(can_commit){
@@ -149,6 +156,9 @@ public class Server extends Thread implements IServer { //
                 recved_versions.put(key, new ArrayList<Version>());
                 recved_versions.get(key).add(new_version);
             }
+
+            System.out.println("Committed key: " + key + " value: " + val + " and new version: " + new_version);
+
             //call pending replicated writes;
             int i = 0;
             RW rw;
@@ -157,21 +167,25 @@ public class Server extends Thread implements IServer { //
                 //remove it and then call;
                 rw = pending_rws.remove();
                 if(rw.key != key && compare(rw.ver, new_version)){
+                    System.out.println("At datacenter " + s_node.id + " recalling replicated write for key: " + rw.key + " and value:  " + rw.val + " and new version: " + rw.ver);
+
                     replicatedWrite(rw.key, rw.val, rw.att_list, rw.ver);
                 }
             }
         } else{
             //add to pending replicated write;
             pending_rws.add(new RW(key, val, attached_dep_list, new_version));
+            System.out.println("Cannot commit adding key: " + key + ", value: " + val + " and new version: " + new_version + " to pending list.");
             //return false;
         }
 
-      
         return can_commit;
     }
 
     public boolean putKeyValue(int key, String val, NodeStruct c_node) throws RemoteException
     {
+        System.out.println("Received client " + c_node.id + "'s write request for key " + key + " with value " + val);
+
         lamport_clock++;
         //replicated write
         Set<Map.Entry<String, IServer>> es = server_stubs.entrySet(); 
@@ -187,6 +201,30 @@ public class Server extends Thread implements IServer { //
                 String server_id = mapElement.getKey();
                 IServer sstub = mapElement.getValue();
                 
+                if(key == 1 && val.compareTo("X_A") == 0 && server_id.compareTo("s2") == 0)
+                    sleep((long)5 * 1000);
+                else if(key == 2 && val.compareTo("Y_C") == 0 && server_id.compareTo("s2") == 0)
+                    sleep((long)10 * 1000);
+                else if(key == 3 && val.compareTo("Z_B") == 0 && server_id.compareTo("s3") == 0)
+                    sleep((long)25 * 1000);
+                else if(key == 3 && val.compareTo("Z_D") == 0 && server_id.compareTo("s3") == 0)
+                    sleep((long)10 * 1000);
+                else if(key == 1 && val.compareTo("X_A") == 0 && server_id.compareTo("s3") == 0)
+                    sleep((long)80 * 1000);
+                else{
+                    //sleep((long) 100 * 1000);
+                }
+
+                //get current time for demo:
+                LocalDateTime curtime = LocalDateTime.now();
+                int hour = curtime.getHour();
+                int minute = curtime.getMinute();
+                int second = curtime.getSecond();
+                int millis = curtime.get(ChronoField.MILLI_OF_SECOND);
+
+                System.out.print("Timestamp of replicated write to server " + server_id + " for key: " + key + " and value: " + val + " and version <" + ver.timestamp + ", " + ver.id + "> is: ");
+                System.out.printf("%02d:%02d:%02d.%03d\n", hour, minute, second, millis);
+
                 //TODO: insert a non cumulative sleep time
                 sstub.replicatedWrite( key, val, att_dep_list, ver);
             }
@@ -195,11 +233,19 @@ public class Server extends Thread implements IServer { //
         }
 
         //add new dependency list;
-        dependency_list.get(c_node.id).clear();
+        if(dependency_list.containsKey(c_node.id))
+        {
+            dependency_list.get(c_node.id).clear();
+            DepNode dn = new DepNode(key, ver);
+            dependency_list.get(c_node.id).add(dn);
+        }
+        else
+        {
+            dependency_list.put(c_node.id, new ArrayList<DepNode>());
+            DepNode dn = new DepNode(key, ver);
+            dependency_list.get(c_node.id).add(dn);
+        }
         
-        DepNode dn = new DepNode(key, ver);
-        dependency_list.get(c_node.id).add(dn);
-
         //add to recved_versions
         if(recved_versions.containsKey(key)){
             recved_versions.get(key).add(ver);
@@ -211,7 +257,7 @@ public class Server extends Thread implements IServer { //
         //Pair<String, Version> new_p = new Pair<String, Version>(val, new Version(lamport_clock, s_node.id));
         //key_v_store.put(key, new_p);
         key_v_store.put(key, val);
-        System.out.println("Added " + val + " and the size of keyvstore is: " + key_v_store.size());
+        System.out.println("Added key: "+ key + " and value: " + val + " and the size of keyvstore is: " + key_v_store.size());
         return true;
     }
 

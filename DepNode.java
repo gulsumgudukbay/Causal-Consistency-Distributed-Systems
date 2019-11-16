@@ -8,4 +8,9 @@ public class DepNode implements Serializable {
 		this.key = key;
 		this.v = v;
 	}
+
+	public String toString()
+	{
+		return "<" + key + ", " + v.toString() + ">";
+	}
 }

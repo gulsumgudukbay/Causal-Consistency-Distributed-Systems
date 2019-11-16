@@ -10,11 +10,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -26,8 +21,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.Random; 
 import java.util.List; 
+import java.time.LocalDateTime;
 
-public class Client implements IClient
+public class Client extends Thread implements IClient
 {
     Registry server_registry;
     IServer server_stub;
@@ -39,7 +35,7 @@ public class Client implements IClient
     {
 	    my_node = new NodeStruct(id, ip, port);
         server_node = new NodeStruct(sid, sip, sport);
-
+        messages = new ArrayList<ArrayList<String>>();
         //x = 1, y = 2, z = 3
         if(id.compareTo("A") == 0)
         {
@@ -77,7 +73,7 @@ public class Client implements IClient
             messages.add(new ArrayList<String>());
             messages.get(0).add("W");
             messages.get(0).add("3");
-            messages.get(0).add("Z_A");
+            messages.get(0).add("Z_D");
         }
 
         try 
@@ -160,17 +156,37 @@ public class Client implements IClient
             
             for(int i = 0; i < cli.messages.size(); i++)
             {
+                if(cli.my_node.id.compareTo("A") == 0)
+                {
+                    
+                }
+                else if(cli.my_node.id.compareTo("B") == 0)
+                {
+                    long ms = 20 * 1000;
+                    sleep(ms);
+                }
+                else if(cli.my_node.id.compareTo("C") == 0)
+                {
+                    long ms = 1 * 1000;
+                    sleep(ms);
+                }
+                else if(cli.my_node.id.compareTo("D") == 0)
+                {
+                    long ms = 55 * 1000;
+                    sleep(ms);
+                }
+
                 if(cli.messages.get(i).get(0).compareTo("R") == 0)
                 {
                     System.out.println("Client " + cli.my_node.id + " read key " + Integer.parseInt(cli.messages.get(i).get(1))+ " and value is: " + cli.read(Integer.parseInt(cli.messages.get(i).get(1))));
                 }
                 else if(cli.messages.get(i).get(0).compareTo("W") == 0)
                 {
-                    if(cli.write(Integer.parseInt(cli.messages.get(i).get(1)), cli.messages.get(i).get(2)))
+                    boolean flag = cli.write(Integer.parseInt(cli.messages.get(i).get(1)), cli.messages.get(i).get(2));
+                    if(flag)
                         System.out.println("Client " + cli.my_node.id + " successfully wrote to key " + Integer.parseInt(cli.messages.get(i).get(1)) + " the value " + cli.messages.get(i).get(2));
-                    else if (!cli.write(Integer.parseInt(cli.messages.get(i).get(1)), cli.messages.get(i).get(2)))
+                    else if (!flag)
                         System.out.println("Client " + cli.my_node.id + " could not write to key " + Integer.parseInt(cli.messages.get(i).get(1)) + " the value " + cli.messages.get(i).get(2));
-                
                 }
             }
 			
