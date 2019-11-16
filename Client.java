@@ -43,21 +43,41 @@ public class Client implements IClient
         //x = 1, y = 2, z = 3
         if(id.compareTo("A") == 0)
         {
-            messages.add(new ArrayList("W", "1", "X_A"));
+            messages.add(new ArrayList<String>());
+            messages.get(0).add("W");
+            messages.get(0).add("1");
+            messages.get(0).add("X_A");
+
         }
         else if(id.compareTo("B") == 0)
         {
-            messages.add(new ArrayList("R", "1"));
-            messages.add(new ArrayList("R", "2"));
-            messages.add(new ArrayList("W", "3", "Z_B"));
+            messages.add(new ArrayList<String>());
+            messages.get(0).add("R");
+            messages.get(0).add("1");
+            
+            messages.add(new ArrayList<String>());
+            messages.get(1).add("R");
+            messages.get(1).add("2");
+
+            messages.add(new ArrayList<String>());
+            messages.get(2).add("W");
+            messages.get(2).add("3");
+            messages.get(2).add("Z_B");
+
         }
         else if(id.compareTo("C") == 0)
         {
-            messages.add(new ArrayList("W", "2", "Y_C"));
+            messages.add(new ArrayList<String>());
+            messages.get(0).add("W");
+            messages.get(0).add("2");
+            messages.get(0).add("Y_C");
         }
         else if(id.compareTo("D") == 0)
         {
-            messages.add(new ArrayList("W", "3", "Z_D"));
+            messages.add(new ArrayList<String>());
+            messages.get(0).add("W");
+            messages.get(0).add("3");
+            messages.get(0).add("Z_A");
         }
 
         try 
@@ -138,7 +158,21 @@ public class Client implements IClient
 
             mystub.registerRequest();
             
-            for()
+            for(int i = 0; i < cli.messages.size(); i++)
+            {
+                if(cli.messages.get(i).get(0).compareTo("R") == 0)
+                {
+                    System.out.println("Client " + cli.my_node.id + " read key " + Integer.parseInt(cli.messages.get(i).get(1))+ " and value is: " + cli.read(Integer.parseInt(cli.messages.get(i).get(1))));
+                }
+                else if(cli.messages.get(i).get(0).compareTo("W") == 0)
+                {
+                    if(cli.write(Integer.parseInt(cli.messages.get(i).get(1)), cli.messages.get(i).get(2)))
+                        System.out.println("Client " + cli.my_node.id + " successfully wrote to key " + Integer.parseInt(cli.messages.get(i).get(1)) + " the value " + cli.messages.get(i).get(2));
+                    else if (!cli.write(Integer.parseInt(cli.messages.get(i).get(1)), cli.messages.get(i).get(2)))
+                        System.out.println("Client " + cli.my_node.id + " could not write to key " + Integer.parseInt(cli.messages.get(i).get(1)) + " the value " + cli.messages.get(i).get(2));
+                
+                }
+            }
 			
         } 
         catch (Exception e) 

@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 //import javafx.util.Pair;
 import java.util.ArrayList;
 import java.util.Map.Entry;
@@ -139,7 +140,7 @@ public class Server extends Thread implements IServer { //
         }
         if(can_commit){
             //lamport_clock++;
-            lamport_clock = max( lamport_clock, new_version.timestamp);
+            lamport_clock = Math.max( lamport_clock, new_version.timestamp);
             key_v_store.put(key, val);
             //update recved versions
             if(recved_versions.containsKey(key)){
@@ -173,16 +174,19 @@ public class Server extends Thread implements IServer { //
     {
         lamport_clock++;
         //replicated write
-        Iterator hmIterator = server_stubs.entrySet().iterator(); 
+
+        Set<Map.Entry<String, IServer>> es = server_stubs.entrySet(); 
+        Iterator<Map.Entry<String, IServer>> hmIterator = es.iterator(); 
+
         //the dependency list to be attached
         List<DepNode> att_dep_list = dependency_list.get(c_node.id);
         Version ver = new Version(lamport_clock, s_node.id);
         //do replicated writes to all DCs
         try{
             while(hmIterator.hasNext()){
-                Map.Entry mapElement = (Map.Entry)hmIterator.next(); 
-                String server_id = (String) mapElement.getKey();
-                IServer sstub = (IServer)  mapElement.getValue();
+                Map.Entry<String, IServer> mapElement = hmIterator.next(); 
+                String server_id = mapElement.getKey();
+                IServer sstub = mapElement.getValue();
                 
                 //TODO: insert a non cumulative sleep time
                 sstub.replicatedWrite( key, val, att_dep_list, ver);
@@ -222,14 +226,16 @@ public class Server extends Thread implements IServer { //
         //sleep(ms);
         sleep(ms);
         try{
-            Iterator<Map.Entry<String, NodeStruct>> hmIterator = obj.server_list.entrySet().iterator(); 
+            Set<Map.Entry<String, NodeStruct>> es = obj.server_list.entrySet(); 
+            Iterator<Map.Entry<String, NodeStruct>> hmIterator = es.iterator(); 
 
             //create map of id -> server stub;
             //System.out.println(obj.server_list.size());
             while(hmIterator.hasNext()){
-                Map.Entry mapElement = (Map.Entry)hmIterator.next(); 
-                String server_id = (String) mapElement.getKey();
-                NodeStruct server_node = (NodeStruct) mapElement.getValue();
+
+                Map.Entry<String, NodeStruct> mapElement = hmIterator.next(); 
+                String server_id = mapElement.getKey();
+                NodeStruct server_node = mapElement.getValue();
                 //System.out.println(server_id + " " + server_node.ip + " " + server_node.port);
                 //System.out.println(obj.s_node.id);
                 if(server_id.compareTo(obj.s_node.id) != 0){
