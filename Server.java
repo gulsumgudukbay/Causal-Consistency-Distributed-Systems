@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantLock;
@@ -93,12 +94,62 @@ public class Server extends Thread implements IServer { //
             key_v_store.put(key, val);
             //return true;
         }*/
-        System.out.println("At datacenter " + s_node.id + " received replicated write for key: " + key + " and value:  " + val + " and new version: " + new_version);
-        System.out.println(dependency_list);
+        try{
+            if(s_node.id.compareTo("s2") == 0 && key == 1 && val.compareTo("X_A") == 0){
+                System.out.println("inside the first sleep");
+                sleep((long)5);
+            }
+            if(s_node.id.compareTo("s3") == 0 && key == 1 && val.compareTo("X_A") == 0){
+                System.out.println("inside the second sleep");
+                sleep((long)80 * 1000);
+            }
+            if(key == 3 && val.compareTo("Z_B") == 0 && s_node.id.compareTo("s3") == 0)
+                sleep((long)1 * 1000);
+           /* if(key == 2 && val.compareTo("Y_C") == 0 && s_node.id.compareTo("s2") == 0)
+                sleep((long)10 * 1000);
+            if(key == 3 && val.compareTo("Z_B") == 0 && s_node.id.compareTo("s3") == 0)
+                sleep((long)25 * 1000);
+            if(key == 3 && val.compareTo("Z_D") == 0 && s_node.id.compareTo("s3") == 0)
+                sleep((long)10 * 1000);
+        */
+        }
+        catch(InterruptedException e)
+        {
+            
+        }
+
+        //get current time for demo:
+        LocalDateTime curtime = LocalDateTime.now();
+        int hour = curtime.getHour();
+        int minute = curtime.getMinute();
+        int second = curtime.getSecond();
+        int millis = curtime.get(ChronoField.MILLI_OF_SECOND);
+
+        System.out.print("At datacenter " + s_node.id + " received replicated write for key: " + key + " and value: " + val + " and new version: " + new_version + " at time ");
+        System.out.printf("%02d:%02d:%02d.%03d\n", hour, minute, second, millis);
+
+        Set<Map.Entry<String, List<DepNode>>> depEs = dependency_list.entrySet(); 
+        Iterator<Map.Entry<String, List<DepNode>>> depEsIterator = depEs.iterator(); 
+
+        //the dependency list to be attached is printed
+        while(depEsIterator.hasNext()){
+            Map.Entry<String, List<DepNode>> depEsElement = depEsIterator.next(); 
+            String dep_key = depEsElement.getKey();
+            ArrayList<DepNode> depNodeList = (ArrayList<DepNode>)depEsElement.getValue();
+
+            System.out.print("The Dependency List for " + dep_key + ": [");
+
+            for(int i = 0; i < depNodeList.size(); i++)
+            {   
+                if(i != 0) 
+                    System.out.print(", ");
+                System.out.print(depNodeList.get(i));
+            }
+            System.out.println("]");
+        }
 
         //traverse list of depnodes
         boolean can_commit = true;
-        //print dependency list
 
         //check if new version is in pending list and remove
         if( pending_list.containsKey(key) ){
@@ -160,17 +211,18 @@ public class Server extends Thread implements IServer { //
             System.out.println("Committed key: " + key + " value: " + val + " and new version: " + new_version);
 
             //call pending replicated writes;
-            int i = 0;
             RW rw;
             //cant use queues; .. can lead to infinite;
             while(!pending_rws.isEmpty()){
                 //remove it and then call;
                 rw = pending_rws.remove();
-                if(rw.key != key && compare(rw.ver, new_version)){
+                if(rw.key != key && !compare(rw.ver, new_version)){
                     System.out.println("At datacenter " + s_node.id + " recalling replicated write for key: " + rw.key + " and value:  " + rw.val + " and new version: " + rw.ver);
 
                     replicatedWrite(rw.key, rw.val, rw.att_list, rw.ver);
                 }
+                else
+                    pending_rws.add(rw);
             }
         } else{
             //add to pending replicated write;
@@ -188,44 +240,46 @@ public class Server extends Thread implements IServer { //
 
         lamport_clock++;
         //replicated write
-        Set<Map.Entry<String, IServer>> es = server_stubs.entrySet(); 
+        Map<String, IServer> sortedMap = new TreeMap<String, IServer>(server_stubs);
+
+        Set<Map.Entry<String, IServer>> es = sortedMap.entrySet(); 
         Iterator<Map.Entry<String, IServer>> hmIterator = es.iterator(); 
 
         //the dependency list to be attached
         List<DepNode> att_dep_list = dependency_list.get(c_node.id);
         Version ver = new Version(lamport_clock, s_node.id);
+
+        //add to recved_versions
+        if(recved_versions.containsKey(key)){
+            recved_versions.get(key).add(ver);
+        }else{
+            recved_versions.put(key, new ArrayList<Version>());
+            recved_versions.get(key).add(ver);
+        }
+
+
         //do replicated writes to all DCs
         try{
             while(hmIterator.hasNext()){
                 Map.Entry<String, IServer> mapElement = hmIterator.next(); 
                 String server_id = mapElement.getKey();
                 IServer sstub = mapElement.getValue();
-                
-                if(key == 1 && val.compareTo("X_A") == 0 && server_id.compareTo("s2") == 0)
-                    sleep((long)5 * 1000);
-                else if(key == 2 && val.compareTo("Y_C") == 0 && server_id.compareTo("s2") == 0)
-                    sleep((long)10 * 1000);
-                else if(key == 3 && val.compareTo("Z_B") == 0 && server_id.compareTo("s3") == 0)
-                    sleep((long)25 * 1000);
-                else if(key == 3 && val.compareTo("Z_D") == 0 && server_id.compareTo("s3") == 0)
-                    sleep((long)10 * 1000);
-                else if(key == 1 && val.compareTo("X_A") == 0 && server_id.compareTo("s3") == 0)
-                    sleep((long)80 * 1000);
-                else{
-                    //sleep((long) 100 * 1000);
+                //System.out.println("SERVER ID" + server_id);
+                /*if(c_node.id.compareTo("A") == 0 && s_node.id.compareTo("s1") == 0 && server_id.compareTo("s2") == 0 && key == 1 && val.compareTo("X_A") == 0){
+                    System.out.println("inside the first sleep");
+                    sleep((long)5);
                 }
-
-                //get current time for demo:
-                LocalDateTime curtime = LocalDateTime.now();
-                int hour = curtime.getHour();
-                int minute = curtime.getMinute();
-                int second = curtime.getSecond();
-                int millis = curtime.get(ChronoField.MILLI_OF_SECOND);
-
-                System.out.print("Timestamp of replicated write to server " + server_id + " for key: " + key + " and value: " + val + " and version <" + ver.timestamp + ", " + ver.id + "> is: ");
-                System.out.printf("%02d:%02d:%02d.%03d\n", hour, minute, second, millis);
-
-                //TODO: insert a non cumulative sleep time
+                if(c_node.id.compareTo("A") == 0 && s_node.id.compareTo("s1") == 0 && server_id.compareTo("s3") == 0 && key == 1 && val.compareTo("X_A") == 0){
+                    System.out.println("inside the second sleep");
+                    sleep((long)120 * 1000);
+                }*/
+                if(c_node.id.compareTo("C") == 0 && key == 2 && val.compareTo("Y_C") == 0 && server_id.compareTo("s2") == 0)
+                    sleep((long)1 * 1000);
+                if(c_node.id.compareTo("B") == 0 && key == 3 && val.compareTo("Z_B") == 0 && server_id.compareTo("s3") == 0)
+                    sleep((long)10 * 1000);
+                if(c_node.id.compareTo("D") == 0 && key == 3 && val.compareTo("Z_D") == 0 && server_id.compareTo("s3") == 0)
+                    sleep((long)30 * 1000);
+                
                 sstub.replicatedWrite( key, val, att_dep_list, ver);
             }
         }catch(Exception e){
@@ -246,13 +300,6 @@ public class Server extends Thread implements IServer { //
             dependency_list.get(c_node.id).add(dn);
         }
         
-        //add to recved_versions
-        if(recved_versions.containsKey(key)){
-            recved_versions.get(key).add(ver);
-        }else{
-            recved_versions.put(key, new ArrayList<Version>());
-            recved_versions.get(key).add(ver);
-        }
 
         //Pair<String, Version> new_p = new Pair<String, Version>(val, new Version(lamport_clock, s_node.id));
         //key_v_store.put(key, new_p);

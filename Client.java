@@ -22,8 +22,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.Random; 
 import java.util.List; 
 import java.time.LocalDateTime;
+import java.util.Scanner;
 
-public class Client extends Thread implements IClient
+public class Client implements IClient
 {
     Registry server_registry;
     IServer server_stub;
@@ -154,27 +155,32 @@ public class Client extends Thread implements IClient
 
             mystub.registerRequest();
             
+            /*if(cli.my_node.id.compareTo("A") == 0)
+            {
+                long ms = 1 * 1000;
+                sleep(ms);
+            }
+            else if(cli.my_node.id.compareTo("B") == 0)
+            {
+                long ms = 20 * 1000;
+                sleep(ms);
+            }
+            else if(cli.my_node.id.compareTo("C") == 0)
+            {
+                long ms = 1 * 1000;
+                sleep(ms);
+            }
+            else if(cli.my_node.id.compareTo("D") == 0)
+            {
+                long ms = 55 * 1000;
+                sleep(ms);
+            }
+*/
+            Scanner in = new Scanner(System.in);
             for(int i = 0; i < cli.messages.size(); i++)
             {
-                if(cli.my_node.id.compareTo("A") == 0)
-                {
-                    
-                }
-                else if(cli.my_node.id.compareTo("B") == 0)
-                {
-                    long ms = 20 * 1000;
-                    sleep(ms);
-                }
-                else if(cli.my_node.id.compareTo("C") == 0)
-                {
-                    long ms = 1 * 1000;
-                    sleep(ms);
-                }
-                else if(cli.my_node.id.compareTo("D") == 0)
-                {
-                    long ms = 55 * 1000;
-                    sleep(ms);
-                }
+                String s = in.nextLine();
+                //System.out.println("You entered string "+s);
 
                 if(cli.messages.get(i).get(0).compareTo("R") == 0)
                 {
@@ -189,7 +195,8 @@ public class Client extends Thread implements IClient
                         System.out.println("Client " + cli.my_node.id + " could not write to key " + Integer.parseInt(cli.messages.get(i).get(1)) + " the value " + cli.messages.get(i).get(2));
                 }
             }
-			
+			in.close();
+
         } 
         catch (Exception e) 
         {
