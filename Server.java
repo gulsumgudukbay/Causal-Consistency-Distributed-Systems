@@ -81,7 +81,7 @@ public class Server extends Thread implements IServer { //
     }
 
     public static boolean compare(Version a, Version b){
-        if(a.id == b.id && a.timestamp == b.timestamp)
+        if((a.id.compareTo(b.id) == 0) && a.timestamp == b.timestamp)
             return true;
         return false;
     }
@@ -128,22 +128,42 @@ public class Server extends Thread implements IServer { //
         System.out.print("At datacenter " + s_node.id + " received replicated write for key: " + key + " and value: " + val + " and new version: " + new_version + " at time ");
         System.out.printf("%02d:%02d:%02d.%03d\n", hour, minute, second, millis);
 
-        Set<Map.Entry<String, List<DepNode>>> depEs = dependency_list.entrySet(); 
-        Iterator<Map.Entry<String, List<DepNode>>> depEsIterator = depEs.iterator(); 
+         
 
         //the dependency list to be attached is printed
+        // while(depEsIterator.hasNext()){
+        //     Map.Entry<String, List<DepNode>> depEsElement = depEsIterator.next(); 
+        //     String dep_key = depEsElement.getKey();
+        ArrayList<DepNode> depNodeList = (ArrayList<DepNode>)attached_dep_list;
+
+        System.out.print("Attached Dependency List : [");
+
+        for(int i = 0; i < depNodeList.size(); i++)
+        {   
+            if(i != 0) 
+                System.out.print(", ");
+            System.out.print(depNodeList.get(i));
+        }
+        System.out.println("]");
+        //}
+
+        Set<Map.Entry<Integer, List<Version>>> depEs = recved_versions.entrySet(); 
+        Iterator<Map.Entry<Integer, List<Version>>> depEsIterator = depEs.iterator();
+
+        //printing recved list till now
         while(depEsIterator.hasNext()){
-            Map.Entry<String, List<DepNode>> depEsElement = depEsIterator.next(); 
-            String dep_key = depEsElement.getKey();
-            ArrayList<DepNode> depNodeList = (ArrayList<DepNode>)depEsElement.getValue();
+            Map.Entry<Integer, List<Version>> depEsElement = depEsIterator.next(); 
+            Integer dep_key = depEsElement.getKey();
+            
+            ArrayList<Version> recvedList = (ArrayList<Version>)depEsElement.getValue();
 
-            System.out.print("The Dependency List for " + dep_key + ": [");
-
-            for(int i = 0; i < depNodeList.size(); i++)
+            System.out.print("Recved List  for key: "+ dep_key + " [" );
+    
+            for(int i = 0; i < recvedList.size(); i++)
             {   
                 if(i != 0) 
                     System.out.print(", ");
-                System.out.print(depNodeList.get(i));
+                System.out.print(recvedList.get(i));
             }
             System.out.println("]");
         }
@@ -171,7 +191,11 @@ public class Server extends Thread implements IServer { //
                 boolean is_present = false;
                 if(recved_versions.containsKey(key1)){
                     for( Version ver : recved_versions.get(key1) ){
+                        System.out.println("Comparing : " + ver1 + " " + ver);
+                        System.out.println("Comparing : " + ver1.id + " " + ver.id);
+                        System.out.println("Comparing : " + ver1.timestamp + " " + ver.timestamp);
                         if(compare(ver1, ver)){
+                            System.out.println("And hence, " + ver1 + " is present");
                             is_present = true;
                             break;
                         }
@@ -213,19 +237,28 @@ public class Server extends Thread implements IServer { //
             //call pending replicated writes;
             RW rw;
             //cant use queues; .. can lead to infinite;
+            System.out.println("Queue size(): " + pending_rws.size());
             while(!pending_rws.isEmpty()){
                 //remove it and then call;
-                rw = pending_rws.remove();
+                //rw = pending_rws.remove();
+                rw = pending_rws.peek();
+                System.out.println("removed rw key" + rw.key + " from queue");
                 if(rw.key != key && !compare(rw.ver, new_version)){
+                    pending_rws.remove();
+                    System.out.println("rw key: " + rw.key + "key: " + key + "rw ver: " + rw.ver + "new ver: " + new_version );
                     System.out.println("At datacenter " + s_node.id + " recalling replicated write for key: " + rw.key + " and value:  " + rw.val + " and new version: " + rw.ver);
 
                     replicatedWrite(rw.key, rw.val, rw.att_list, rw.ver);
                 }
-                else
-                    pending_rws.add(rw);
+                else{
+                    //System.out.println("1: added rw key " + rw.key + " version: " + rw.ver + " to queue");
+                    //pending_rws.add(rw);
+                    break;
+                }
             }
         } else{
             //add to pending replicated write;
+            System.out.println("2: added rw key " + key + " version " + new_version + " to queue");
             pending_rws.add(new RW(key, val, attached_dep_list, new_version));
             System.out.println("Cannot commit adding key: " + key + ", value: " + val + " and new version: " + new_version + " to pending list.");
             //return false;
@@ -250,6 +283,7 @@ public class Server extends Thread implements IServer { //
         Version ver = new Version(lamport_clock, s_node.id);
 
         //add to recved_versions
+        System.out.println("added created version:" + ver + "to recved list");
         if(recved_versions.containsKey(key)){
             recved_versions.get(key).add(ver);
         }else{
